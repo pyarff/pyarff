@@ -1,10 +1,10 @@
 from __future__ import print_function
 import sys
-from setuptools import setup, find_packages
+from setuptools import setup
+from Cython.Build import cythonize
 
 with open('requirements.txt') as f:
     INSTALL_REQUIRES = [l.strip() for l in f.readlines() if l]
-
 
 try:
     import numpy
@@ -22,7 +22,9 @@ setup(name='pyarff',
       version='0.0.1',
       description='A cythonized ARFF reader/writer for python',
       author='Raghav R V',
-      packages=find_packages(),
-      install_requires=INSTALL_REQUIRES,
+      packages=['pyarff'],
+      ext_modules=cythonize('pyarff/*.pyx', language='c++'),
+      include_dirs=[numpy.get_include()],
+      install_requires=['numpy', 'scipy'],
       author_email='rvraghav93@gmail.com',
       )
