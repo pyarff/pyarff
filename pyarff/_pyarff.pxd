@@ -1,4 +1,5 @@
 # distutils: language = c++
+# cython: boundscheck=False, wraparound=False, initializedcheck=False, cdivision=True
 
 # Authors: Raghav R V <rvraghav93@gmail.com>
 #

@@ -1,4 +1,5 @@
 # distutils: language = c++
+# cython: boundscheck=False, wraparound=False, initializedcheck=False, cdivision=True
 
 # Authors: Raghav R V <rvraghav93@gmail.com>
 #
@@ -17,6 +18,7 @@ from libc.stdlib cimport free, malloc
 # Cython imports
 cimport numpy as cnp
 from .utils cimport string_to_double
+from .utils cimport string_to_int
 
 # Python imports
 import os
@@ -120,7 +122,7 @@ cdef class ARFFReader(object):
                 line = raw_line.strip()
 
                 # Skip comment lines
-                if line[0] == '%':
+                if (len(line) == 0) or (line[0] == '%'):
                     continue
 
                 first_field = line[:10].lower()
@@ -304,6 +306,7 @@ cdef class ARFFReader(object):
         cdef bint sparse = self.sparse
 
         cdef char ch     # The current character
+        cdef char quote_type    # The current quote type, to allow nesting of quotes
         cdef char first_char    # The first char of the parsed line
         cdef char* line = NULL  # The character buffer for the current line
         cdef size_t line_buffer_size = 0
@@ -356,6 +359,7 @@ cdef class ARFFReader(object):
             # Clear attr buffer variables
             attr_len = 0
             inside_quotes = False
+            quote_type = 0
             inside_attr_field = False
 
             unparsed_attr = False
@@ -381,54 +385,54 @@ cdef class ARFFReader(object):
                         continue
 
                 # 39 --> ' (single-quote)  34 --> " (double-quote)
-                elif ch == 39:
-                    if not inside_quotes:
-                        # dbg_str +=  "2a "
-                        inside_quotes = True
-                        quote_type = 39 # (')
-                        inside_attr_field = True
-                        attr_buffer[attr_len] = '\0'
-                        unparsed_attr = True
-                        char_index += 1
-                        # Don't continue go to end and parse the attr
+                elif (ch == 39) and not inside_quotes:
+                    # dbg_str +=  "2a "
+                    inside_quotes = True
+                    quote_type = 39 # (')
+                    inside_attr_field = True
+                    attr_buffer[attr_len] = '\0'
+                    unparsed_attr = True
+                    char_index += 1
+                    # Don't continue go to end and parse the attr
 
-                    # If inside quotes and the previous starting quote
-                    # was also single
-                    elif quote_type == 39:
-                        # dbg_str +=  "3a "
-                        inside_quotes = False
-                        # This quote terminates the attribute field
-                        # Now lets skip all chars until the next comma
-                        inside_attr_field = False
-                        attr_buffer[attr_len] = '\0'
-                        # Skip the quote character
-                        char_index += 1
-                        continue
+                # If inside quotes and the previous starting quote
+                # was also single
+                elif (ch == 39) and (quote_type == 39):
+                    # dbg_str +=  "3a "
+                    inside_quotes = False
+                    quote_type == 0
+                    # This quote terminates the attribute field
+                    # Now lets skip all chars until the next comma
+                    inside_attr_field = False
+                    attr_buffer[attr_len] = '\0'
+                    # Skip the quote character
+                    char_index += 1
+                    continue
 
                 # 39 --> ' (single-quote)  34 --> " (double-quote)
-                elif ch == 34:
-                    if not inside_quotes:
-                        # dbg_str +=  "2b "
-                        inside_quotes = True
-                        quote_type = 34 # (")
-                        inside_attr_field = True
-                        attr_buffer[attr_len] = '\0'
-                        unparsed_attr = True
-                        char_index += 1
-                        # Don't continue go to end and parse the attr
+                elif (ch == 34) and not inside_quotes:
+                    # dbg_str +=  "2b "
+                    inside_quotes = True
+                    quote_type = 34 # (")
+                    inside_attr_field = True
+                    attr_buffer[attr_len] = '\0'
+                    unparsed_attr = True
+                    char_index += 1
+                    # Don't continue go to end and parse the attr
 
-                    # If inside quotes and the previous starting quote
-                    # was also double
-                    elif quote_type == 34:
-                        # dbg_str +=  "3b "
-                        inside_quotes = False
-                        # This quote terminates the attribute field
-                        # Now lets skip all chars until the next comma
-                        inside_attr_field = False
-                        attr_buffer[attr_len] = '\0'
-                        # Skip the quote character
-                        char_index += 1
-                        continue
+                # If inside quotes and the previous starting quote
+                # was also double
+                elif (ch == 34) and (quote_type == 34):
+                    # dbg_str +=  "3b "
+                    inside_quotes = False
+                    quote_type == 0
+                    # This quote terminates the attribute field
+                    # Now lets skip all chars until the next comma
+                    inside_attr_field = False
+                    attr_buffer[attr_len] = '\0'
+                    # Skip the quote character
+                    char_index += 1
+                    continue
 
                 # comma in/out quotes
                 elif ch == 44: # --> , (comma)
@@ -504,12 +508,14 @@ cdef class ARFFReader(object):
                         # print "missing"
                         data[row, col] = np.nan
 
-                    elif (attr_type == ATTR_NUMERIC or
-                              attr_type == ATTR_INTEGER or
-                              attr_type == ATTR_REAL):
+                    elif attr_type == ATTR_REAL:
                         # print "converting to float"
                         data[row, col] = (
                             <DOUBLE_t> string_to_double(attr_buffer, attr_len))
+                    elif (attr_type == ATTR_NUMERIC or
+                              attr_type == ATTR_INTEGER):
+                        data[row, col] = (
+                            <DOUBLE_t> string_to_int(attr_buffer, attr_len))
 
                     elif attr_type == ATTR_NOMINAL_ENCODED:
                         # End the attr string with a NULL terminator and get
@@ -629,18 +635,18 @@ cdef class ARFFReader(object):
 
 def _clean_cat_names(catg):
     """Helper to clean categorical names and strip them of quotes."""
-    catg = catg.strip()
+    cleaned_catg = catg.strip()
     l_catg = len(catg)
     for quote_type in ("'", '"'):
         if catg[0] == quote_type:
             if l_catg == 1:
                 # If the quote_type itself is a
                 # category
-                cleaned_catg = catg
+                pass
             elif catg[-1] == quote_type:
                 # Or if it simply surrounds the
                 # category, strip it.
-                cleaned_catg = catg.strip(quote_type)
+                cleaned_catg = cleaned_catg.strip(quote_type)
 
     if len(cleaned_catg) == 0:
         raise ValueError("Bad category name - %s"

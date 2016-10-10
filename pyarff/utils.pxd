@@ -1,4 +1,5 @@
 # distutils: language = c++
+# cython: boundscheck=False, wraparound=False, initializedcheck=False, cdivision=True
 
 # Authors: Raghav R V <rvraghav93@gmail.com>
 #
@@ -17,4 +18,7 @@ ctypedef cnp.npy_float64 DTYPE_t         # dtypes for the data matrix
                                          # Lets use 64 bit format as default float type
 
 # To convert string to double without overheads
-cpdef double string_to_double(char *p, SIZE_t total_len) nogil
+cpdef DOUBLE_t string_to_double(char *p, SIZE_t total_len) nogil
+
+# To convert string to int without overheads
+cpdef SIZE_t string_to_int(char *p, SIZE_t total_len) nogil
