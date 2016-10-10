@@ -380,19 +380,47 @@ cdef class ARFFReader(object):
                             char_index += 1
                         continue
 
-                elif ch == 39:  # --> ' (quote)
+                # 39 --> ' (single-quote)  34 --> " (double-quote)
+                elif ch == 39:
                     if not inside_quotes:
-                        # dbg_str +=  "2 "
+                        # dbg_str +=  "2a "
                         inside_quotes = True
+                        quote_type = 39 # (')
                         inside_attr_field = True
                         attr_buffer[attr_len] = '\0'
                         unparsed_attr = True
                         char_index += 1
                         # Don't continue go to end and parse the attr
 
-                    # If inside quotes
-                    else:
-                        # dbg_str +=  "3 "
+                    # If inside quotes and the previous starting quote
+                    # was also single
+                    elif quote_type == 39:
+                        # dbg_str +=  "3a "
+                        inside_quotes = False
+                        # This quote terminates the attribute field
+                        # Now lets skip all chars until the next comma
+                        inside_attr_field = False
+                        attr_buffer[attr_len] = '\0'
+                        # Skip the quote character
+                        char_index += 1
+                        continue
+
+                # 39 --> ' (single-quote)  34 --> " (double-quote)
+                elif ch == 34:
+                    if not inside_quotes:
+                        # dbg_str +=  "2b "
+                        inside_quotes = True
+                        quote_type = 34 # (")
+                        inside_attr_field = True
+                        attr_buffer[attr_len] = '\0'
+                        unparsed_attr = True
+                        char_index += 1
+                        # Don't continue go to end and parse the attr
+
+                    # If inside quotes and the previous starting quote
+                    # was also double
+                    elif quote_type == 34:
+                        # dbg_str +=  "3b "
                         inside_quotes = False
                         # This quote terminates the attribute field
                         # Now lets skip all chars until the next comma
