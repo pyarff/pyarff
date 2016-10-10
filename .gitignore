@@ -64,3 +64,14 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Sublime stuff
+*.sublime*
+
+# Compiled cython
+*.c
+*.cpp
+
+# Vim
+
+*swp
