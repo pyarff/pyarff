@@ -46,6 +46,6 @@ cdef class ARFFReader(object):
 
 
     # Methods
-    cdef void _load_metadata(self)
-    cdef void _scan_data(self)
-    cdef void _read_data_dense(self, DOUBLE_t[:, :] data)
+    cdef void _load_metadata(self) except+
+    cdef void _scan_data(self) except+
+    cdef void _read_data_dense(self, DOUBLE_t[:, :] data) except+

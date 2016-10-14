@@ -91,7 +91,7 @@ cdef class ARFFReader(object):
         del self.n_categories
         del self.convertors
 
-    cdef void _load_metadata(self):
+    cdef void _load_metadata(self) except+:
         """Read the attributes from the arff datafile and update class metadata"""
         cdef size_t line_no
         cdef size_t i
@@ -238,10 +238,10 @@ cdef class ARFFReader(object):
                     # The data_line_no is the 0-indexed number of the line at which
                     # the "@DATA" meta header is found
                     self.data_header_line_no = line_no
-                    # print "Data at", line_no
+                    # print("Data at", line_no)
                     break
 
-    cdef void _scan_data(self):
+    cdef void _scan_data(self) except+:
         cdef size_t n_samples = 0
         cdef data_header_line_no = self.data_header_line_no
         cdef bint sparse = self.sparse
@@ -298,7 +298,7 @@ cdef class ARFFReader(object):
         free(line)    # Deallocate the line buffer
         fclose(cfile) # Close the file stream
 
-    cdef void _read_data_dense(self, DOUBLE_t[:, :] data):
+    cdef void _read_data_dense(self, DOUBLE_t[:, :] data) except+:
         cdef size_t n_samples = self.n_samples
         cdef size_t n_attributes = self.n_attributes
 
