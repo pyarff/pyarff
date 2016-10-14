@@ -508,12 +508,11 @@ cdef class ARFFReader(object):
                         # print "missing"
                         data[row, col] = np.nan
 
-                    elif attr_type == ATTR_REAL:
+                    elif (attr_type == ATTR_REAL or attr_type == ATTR_NUMERIC):
                         # print "converting to float"
                         data[row, col] = (
                             <DOUBLE_t> string_to_double(attr_buffer, attr_len))
-                    elif (attr_type == ATTR_NUMERIC or
-                              attr_type == ATTR_INTEGER):
+                    elif attr_type == ATTR_INTEGER:
                         data[row, col] = (
                             <DOUBLE_t> string_to_int(attr_buffer, attr_len))
 
@@ -538,8 +537,9 @@ cdef class ARFFReader(object):
                             raise ValueError("Unknown category (%s) detected "
                                              "for value of attribute %s for "
                                              "sample number %d"
-                                             % (self.attribute_names[0][col],
-                                                <string> attr_buffer, row))
+                                             % (<string> attr_buffer,
+                                                self.attribute_names[0][col],
+                                                row))
 
                     col += 1
                     # Clear the attr variable
@@ -635,7 +635,8 @@ cdef class ARFFReader(object):
 
 def _clean_cat_names(catg):
     """Helper to clean categorical names and strip them of quotes."""
-    cleaned_catg = catg.strip()
+    unclean_catg = catg
+    catg = catg.strip()
     l_catg = len(catg)
     for quote_type in ("'", '"'):
         if catg[0] == quote_type:
@@ -643,12 +644,12 @@ def _clean_cat_names(catg):
                 # If the quote_type itself is a
                 # category
                 pass
-            elif catg[-1] == quote_type:
+            elif catg[l_catg-1] == quote_type:
                 # Or if it simply surrounds the
                 # category, strip it.
-                cleaned_catg = cleaned_catg.strip(quote_type)
+                catg = catg.strip(quote_type)
 
-    if len(cleaned_catg) == 0:
-        raise ValueError("Bad category name - %s"
-                         % catg)
-    return cleaned_catg
+    if len(catg) == 0:
+        raise ValueError("Bad category name - %r"
+                         % unclean_catg)
+    return catg
